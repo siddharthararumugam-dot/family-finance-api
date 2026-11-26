@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Date, Float, Integer, String, create_engine, func, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from passlib.context import CryptContext
@@ -160,6 +160,8 @@ def get_current_user(
 # ============================================================
 
 class Expense(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     category: str = Field(min_length=1)
     amount: float = Field(gt=0)
     date: date
@@ -173,6 +175,8 @@ class ExpenseResponse(BaseModel):
 
 
 class Income(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     source: str = Field(min_length=1)
     amount: float = Field(gt=0)
     date: date
@@ -314,11 +318,24 @@ def get_expenses(
 @app.get("/expenses/summary")
 def get_summary(
     date: date | None = None,
-    db=Depends(get_db)
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    user = db.query(UserDB).filter(
+        UserDB.username == current_user
+    ).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
+
     query = db.query(
         ExpenseDB.category,
         func.sum(ExpenseDB.amount)
+    ).filter(
+        ExpenseDB.user_id == user.id
     )
 
     if date:
@@ -343,9 +360,22 @@ def get_summary(
 @app.get("/expenses/total")
 def get_total(
     date: date | None = None,
-    db=Depends(get_db)
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    query = db.query(ExpenseDB)
+    user = db.query(UserDB).filter(
+        UserDB.username == current_user
+    ).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
+
+    query = db.query(ExpenseDB).filter(
+        ExpenseDB.user_id == user.id
+    )
 
     if date:
         query = query.filter(ExpenseDB.date == date)
