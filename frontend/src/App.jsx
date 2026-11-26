@@ -17,6 +17,10 @@ function App() {
   const [expenses, setExpenses] = useState([])
   const [income, setIncome] = useState([])
 
+  // Refresh + delete
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [deleteError, setDeleteError] = useState("")
+
   // Add Expense
   const [category, setCategory] = useState("")
   const [amount, setAmount] = useState("")
@@ -145,7 +149,7 @@ function App() {
 
     fetchData()
 
-  }, [token])
+  }, [token, refreshKey])
 
   // ADD EXPENSE
 
@@ -196,6 +200,9 @@ function App() {
     setExpenseDate("")
 
     setExpenseSuccess("Expense added successfully")
+
+    // Reload data so the Monthly Overview updates too
+    setRefreshKey((key) => key + 1)
   }
 
   // ADD INCOME
@@ -247,6 +254,39 @@ function App() {
     setIncomeDate("")
 
     setIncomeSuccess("Income added successfully")
+
+    // Reload data so the Monthly Overview updates too
+    setRefreshKey((key) => key + 1)
+  }
+
+  // DELETE
+
+  async function handleDelete(transaction) {
+    if (!window.confirm("Delete this entry?")) {
+      return
+    }
+
+    setDeleteError("")
+
+    const path =
+      transaction.type === "expense" ? "expenses" : "income"
+
+    const response = await fetch(
+      `http://127.0.0.1:8000/${path}/${transaction.rawId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    if (!response.ok) {
+      setDeleteError("Could not delete this entry.")
+      return
+    }
+
+    setRefreshKey((key) => key + 1)
   }
 
   // LOGOUT
@@ -314,23 +354,25 @@ function App() {
 
   // TRANSACTIONS
 
-const transactions = [
-  ...expenses.map((expense) => ({
-    id: `expense-${expense.id}`,
-    name: expense.category,
-    amount: -expense.amount,
-    date: expense.date,
-    type: "expense"
-  })),
+  const transactions = [
+    ...expenses.map((expense) => ({
+      id: `expense-${expense.id}`,
+      rawId: expense.id,
+      name: expense.category,
+      amount: -expense.amount,
+      date: expense.date,
+      type: "expense"
+    })),
 
-  ...income.map((item) => ({
-    id: `income-${item.id}`,
-    name: item.source,
-    amount: item.amount,
-    date: item.date,
-    type: "income"
-  }))
-]
+    ...income.map((item) => ({
+      id: `income-${item.id}`,
+      rawId: item.id,
+      name: item.source,
+      amount: item.amount,
+      date: item.date,
+      type: "income"
+    }))
+  ]
 
   transactions.sort(
     (a, b) =>
@@ -528,6 +570,12 @@ const transactions = [
 
             <h2>Recent Transactions</h2>
 
+            {deleteError && (
+              <p className="error">
+                {deleteError}
+              </p>
+            )}
+
             {transactions.length === 0 ? (
 
               <p>No transactions yet.</p>
@@ -536,33 +584,42 @@ const transactions = [
 
               transactions.slice(0, 5).map((transaction) => (
 
-<div
-  className={`transaction ${transaction.type}`}
-  key={transaction.id}
->
-  <div className="transaction-info">
-    <div className="transaction-icon">
-      {transaction.type === "income" ? "↑" : "↓"}
-    </div>
+                <div
+                  className={`transaction ${transaction.type}`}
+                  key={transaction.id}
+                >
+                  <div className="transaction-info">
+                    <div className="transaction-icon">
+                      {transaction.type === "income" ? "↑" : "↓"}
+                    </div>
 
-    <div>
-      <span className="transaction-name">
-        {transaction.name}
-      </span>
+                    <div>
+                      <span className="transaction-name">
+                        {transaction.name}
+                      </span>
 
-      <span className="transaction-date">
-        {transaction.date}
-      </span>
-    </div>
-  </div>
+                      <span className="transaction-date">
+                        {transaction.date}
+                      </span>
+                    </div>
+                  </div>
 
-  <strong>
-    {transaction.amount > 0
-      ? `+ ₹${transaction.amount}`
-      : `- ₹${Math.abs(transaction.amount)}`
-    }
-  </strong>
-</div>
+                  <div className="transaction-right">
+                    <strong>
+                      {transaction.amount > 0
+                        ? `+ ₹${transaction.amount}`
+                        : `- ₹${Math.abs(transaction.amount)}`
+                      }
+                    </strong>
+
+                    <button
+                      className="delete-button"
+                      onClick={() => handleDelete(transaction)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
 
               ))
 
