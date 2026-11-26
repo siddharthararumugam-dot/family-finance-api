@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react"
 import "./App.css"
 
+// Turns a backend error into readable text.
+// FastAPI sends either a string or a list of validation errors.
+function getErrorMessage(data, fallback) {
+  if (!data || !data.detail) {
+    return fallback
+  }
+
+  if (typeof data.detail === "string") {
+    return data.detail
+  }
+
+  if (Array.isArray(data.detail)) {
+    return data.detail.map((item) => item.msg).join(", ")
+  }
+
+  return fallback
+}
+
 function App() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -10,6 +28,10 @@ function App() {
   )
 
   const [error, setError] = useState("")
+
+  // Register
+  const [isRegister, setIsRegister] = useState(false)
+  const [registerMessage, setRegisterMessage] = useState("")
 
   const [balanceData, setBalanceData] = useState(null)
   const [monthlyData, setMonthlyData] = useState(null)
@@ -59,13 +81,55 @@ function App() {
     const data = await response.json()
 
     if (!response.ok) {
-      setError(data.detail)
+      setError(getErrorMessage(data, "Login failed"))
       return
     }
 
     localStorage.setItem("token", data.access_token)
 
     setToken(data.access_token)
+  }
+
+  // REGISTER
+
+  async function handleRegister(event) {
+    event.preventDefault()
+
+    setError("")
+    setRegisterMessage("")
+
+    const response = await fetch(
+      "http://127.0.0.1:8000/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password
+        })
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      setError(getErrorMessage(data, "Registration failed"))
+      return
+    }
+
+    setPassword("")
+    setIsRegister(false)
+    setRegisterMessage("Account created! Please log in.")
+  }
+
+  // SWITCH BETWEEN LOGIN AND REGISTER
+
+  function switchMode() {
+    setIsRegister((current) => !current)
+    setError("")
+    setRegisterMessage("")
   }
 
   // FETCH DATA
@@ -178,7 +242,7 @@ function App() {
     const data = await response.json()
 
     if (!response.ok) {
-      setExpenseError(data.detail)
+      setExpenseError(getErrorMessage(data, "Could not add expense"))
       return
     }
 
@@ -232,7 +296,7 @@ function App() {
     const data = await response.json()
 
     if (!response.ok) {
-      setIncomeError(data.detail)
+      setIncomeError(getErrorMessage(data, "Could not add income"))
       return
     }
 
@@ -309,14 +373,22 @@ function App() {
 
         <form
           className="login-card"
-          onSubmit={handleLogin}
+          onSubmit={isRegister ? handleRegister : handleLogin}
         >
 
           <h1>Family Finance</h1>
 
           <p>
-            Sign in to manage your finances.
+            {isRegister
+              ? "Create an account to get started."
+              : "Sign in to manage your finances."}
           </p>
+
+          {registerMessage && (
+            <p className="success">
+              {registerMessage}
+            </p>
+          )}
 
           <input
             type="text"
@@ -343,7 +415,17 @@ function App() {
           )}
 
           <button type="submit">
-            Login
+            {isRegister ? "Create account" : "Login"}
+          </button>
+
+          <button
+            type="button"
+            className="link-button"
+            onClick={switchMode}
+          >
+            {isRegister
+              ? "Already have an account? Login"
+              : "New here? Create an account"}
           </button>
 
         </form>

@@ -411,3 +411,26 @@ body {
 .delete-button:hover {
   background: #fee2e2;
 }
+
+/* Register / login extras */
+
+.login-card .error {
+  color: #dc2626;
+}
+
+.login-card .success {
+  color: #16a34a;
+}
+
+.login-card .link-button {
+  background: none;
+  border: none;
+  color: #111827;
+  margin-top: 12px;
+  text-decoration: underline;
+}
+
+.login-card .link-button:hover {
+  background: none;
+  color: #374151;
+}
