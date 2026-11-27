@@ -30,6 +30,7 @@ Built as a portfolio project with **FastAPI**, **PostgreSQL** and **React**.
 - Balance, totals, category summary and monthly summary endpoints
 - Input validation (positive amounts, valid dates, non-empty text)
 - Each user can only see and change their own data
+- 57 automated tests (pytest) covering authentication, validation, CRUD, reports and per-user data isolation
 
 ## Tech stack
 
@@ -109,12 +110,32 @@ npm run dev
 ```
 Open the link shown in the terminal (usually `http://localhost:5173`).
 
+## Running the tests
+
+The tests use a temporary SQLite database, so they never touch your real data.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+| Test file | What it checks |
+|---|---|
+| `tests/test_auth.py` | Registration, login, password hashing, protected routes |
+| `tests/test_transactions.py` | Create, read, update and delete for income and expenses, plus input validation |
+| `tests/test_reports.py` | Balance, totals, category summary and monthly summary |
+| `tests/test_data_isolation.py` | One user can never read, change or delete another user's data |
+
 ## Project structure
 
 ```
 family-finance-api/
 ├── main.py              # FastAPI app: models, schemas and endpoints
 ├── requirements.txt     # Python dependencies
+├── requirements-dev.txt # Adds pytest for running tests
+├── pytest.ini           # Test configuration
+├── tests/               # Automated API tests
+├── screenshots/         # Images used in this README
 ├── .env.example         # Example environment settings
 └── frontend/            # React + Vite app
     └── src/
@@ -134,7 +155,7 @@ family-finance-api/
 - Households with several family members sharing finances
 - Recurring bills and transactions
 - CSV export
-- Automated tests and deployment
+- Deployment with a live demo
 
 ## Author
 Siddharthar A — [GitHub](https://github.com/siddharthararumugam-dot) · [LinkedIn](https://linkedin.com/in/siddharthar-arumugam-02b083241)
